@@ -83,21 +83,35 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   transition:background 0.2s,border-color 0.2s;position:relative;
   background:var(--blush);
 }
-.upload-area:hover{background:#f5e0e8;border-color:var(--rose);}
+.upload-area:hover,.upload-area.dragover{background:#f5e0e8;border-color:var(--rose);}
 .upload-area input[type=file]{
-  position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;
+  position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2;
 }
 .upload-icon{font-size:32px;margin-bottom:8px;}
 .upload-text{font-size:14px;color:var(--rose-dark);font-weight:500;}
 .upload-sub{font-size:12px;color:var(--muted);margin-top:4px;}
 .upload-preview{
-  width:100%;max-height:200px;object-fit:cover;border-radius:10px;
+  width:100%;max-height:220px;object-fit:cover;border-radius:10px;
   margin-top:12px;display:none;
 }
-.upload-progress{
-  margin-top:10px;font-size:12px;color:var(--muted);display:none;
+
+/* Progress bar */
+.upload-progress-wrap{
+  margin-top:10px;display:none;
 }
-.upload-progress.show{display:block;}
+.upload-progress-wrap.show{display:block;}
+.upload-progress-bar-bg{
+  height:4px;background:rgba(201,116,138,0.15);border-radius:4px;overflow:hidden;
+}
+.upload-progress-bar{
+  height:100%;width:0%;background:linear-gradient(90deg,var(--rose-dark),var(--rose));
+  border-radius:4px;transition:width 0.3s ease;
+}
+.upload-progress-text{
+  font-size:12px;color:var(--muted);margin-top:6px;text-align:center;
+}
+.upload-progress-text.success{color:#2e7d32;}
+.upload-progress-text.error{color:#c0392b;}
 
 .add-btn{
   display:flex;align-items:center;justify-content:center;gap:8px;
@@ -161,6 +175,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 }
 .saving-overlay.show{display:flex;}
 .saving-text{font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--rose-dark);}
+.saving-sub{font-size:13px;color:var(--muted);}
 </style>
 </head>
 <body>
@@ -169,6 +184,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 <div class="saving-overlay" id="savingOverlay">
   <div class="spinner"></div>
   <div class="saving-text">Creating your memory page…</div>
+  <div class="saving-sub" id="savingSubText">Saving everything to the cloud ✦</div>
 </div>
 
 <div class="topbar">
@@ -236,7 +252,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   <!-- STEP 2: GALLERY -->
   <div class="step-panel" id="step-2">
     <h2 class="step-heading">Photo <em>gallery</em></h2>
-    <p class="step-sub">Upload photos directly from your phone or computer. You can add up to 12.</p>
+    <p class="step-sub">Upload photos from your phone's camera roll or gallery — or paste a URL. Up to 12 photos.</p>
     <div class="photo-entries" id="photoEntries"></div>
     <button class="add-btn" onclick="addPhoto()" id="addPhotoBtn">+ Add another photo</button>
     <div class="step-nav">
@@ -322,7 +338,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
-// Expose to window so non-module scripts can call it
 window._saveToFirestore = async function(id, data) {
   await setDoc(doc(db, "pages", id), data);
 };
@@ -331,35 +346,58 @@ window._saveToFirestore = async function(id, data) {
 <script>
 /* ══════════════════════════════════
    CLOUDINARY PHOTO UPLOAD
-   Upload photo → get back a permanent URL
+   Unsigned upload — no login needed from the user
    ══════════════════════════════════ */
-const CLOUD_NAME    = 'dummycloud';   // ← will be replaced after Cloudinary setup
-const UPLOAD_PRESET = 'lovelang';     // ← will be replaced after Cloudinary setup
+const CLOUD_NAME    = 'dqjonsluh';
+const UPLOAD_PRESET = 'lovelang';
 
-async function uploadToCloudinary(file, progressEl, previewEl) {
-  const fd = new FormData();
-  fd.append('file', file);
-  fd.append('upload_preset', UPLOAD_PRESET);
-
-  progressEl.textContent = 'Uploading…';
-  progressEl.classList.add('show');
+async function uploadToCloudinary(file, progressBar, progressText) {
+  const progressWrap = progressBar.closest('.upload-progress-wrap');
+  progressWrap.classList.add('show');
+  progressText.textContent = 'Uploading…';
+  progressText.className = 'upload-progress-text';
+  progressBar.style.width = '20%';
 
   try {
-    const res  = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method:'POST', body:fd });
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', UPLOAD_PRESET);
+
+    progressBar.style.width = '50%';
+
+    const res  = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+      method: 'POST',
+      body: formData
+    });
+
+    progressBar.style.width = '85%';
     const data = await res.json();
+
     if (data.secure_url) {
-      previewEl.src     = data.secure_url;
-      previewEl.style.display = 'block';
-      progressEl.textContent  = '✓ Uploaded!';
-      setTimeout(() => progressEl.classList.remove('show'), 2000);
+      progressBar.style.width = '100%';
+      progressText.textContent = '✓ Photo uploaded!';
+      progressText.className = 'upload-progress-text success';
       return data.secure_url;
     } else {
       throw new Error(data.error?.message || 'Upload failed');
     }
   } catch(e) {
-    progressEl.textContent = '✗ Upload failed — try a URL instead';
+    console.error('Cloudinary upload error:', e);
+    progressBar.style.width = '100%';
+    progressBar.style.background = '#e74c3c';
+    progressText.textContent = '✗ Upload failed. Try a URL instead.';
+    progressText.className = 'upload-progress-text error';
     return null;
   }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = () => reject(new Error('File read failed'));
+    reader.readAsDataURL(file);
+  });
 }
 
 /* ══════════════════════════════════
@@ -440,10 +478,9 @@ function addLetter(){
   document.getElementById('addLetterBtn').style.display = letterCount >= 6 ? 'none' : 'flex';
 }
 
-// PHOTOS — with direct upload
+// PHOTOS — with Cloudinary upload
 let photoCount = 0;
-// Store uploaded URLs separately so they survive DOM traversal
-const photoUrls = {};
+const photoUrls = {}; // stores final URL per photo index
 
 function addPhoto(){
   if(photoCount >= 12){ alert('Maximum 12 photos.'); return; }
@@ -457,18 +494,30 @@ function addPhoto(){
       <div class="photo-entry-num">Photo ${idx+1}</div>
       <button class="remove-btn" onclick="removeEntry('photo-${idx}')">✕</button>
     </div>
+
+    <!-- Upload area — tap to pick from camera roll / gallery -->
     <div class="upload-area" id="upload-area-${idx}">
-      <input type="file" accept="image/*" onchange="handleFileUpload(event,${idx})">
-      <div class="upload-icon">📷</div>
-      <div class="upload-text">Tap to upload a photo</div>
-      <div class="upload-sub">From camera roll, gallery, or files</div>
+      <input type="file" accept="image/*" capture="environment" onchange="handleFileUpload(event,${idx})" id="file-input-${idx}">
+      <div id="upload-inner-${idx}">
+        <div class="upload-icon">📷</div>
+        <div class="upload-text">Tap to choose a photo</div>
+        <div class="upload-sub">Camera roll · Gallery · Files</div>
+      </div>
       <img class="upload-preview" id="preview-${idx}" src="" alt="preview">
-      <div class="upload-progress" id="progress-${idx}"></div>
+      <div class="upload-progress-wrap" id="progress-wrap-${idx}">
+        <div class="upload-progress-bar-bg">
+          <div class="upload-progress-bar" id="progress-bar-${idx}"></div>
+        </div>
+        <div class="upload-progress-text" id="progress-text-${idx}"></div>
+      </div>
     </div>
+
+    <!-- Fallback: paste URL -->
     <div class="field" style="margin-top:12px">
-      <label>Or paste an image URL <span>(optional if you uploaded above)</span></label>
-      <input type="url" id="p-src-${idx}" placeholder="https://i.imgur.com/yourphoto.jpg" oninput="handleUrlInput(${idx})">
+      <label>Or paste a photo URL <span>(optional)</span></label>
+      <input type="url" id="p-src-${idx}" placeholder="https://res.cloudinary.com/dqjonsluh/..." oninput="handleUrlInput(${idx})">
     </div>
+
     <div class="field-row">
       <div class="field"><label>Caption</label><input type="text" id="p-caption-${idx}" placeholder="The day everything changed"></div>
       <div class="field"><label>Date</label><input type="text" id="p-date-${idx}" placeholder="March 2023"></div>
@@ -481,29 +530,28 @@ function addPhoto(){
 async function handleFileUpload(event, idx){
   const file = event.target.files[0];
   if(!file) return;
+
   const previewEl  = document.getElementById(`preview-${idx}`);
-  const progressEl = document.getElementById(`progress-${idx}`);
+  const progressBar  = document.getElementById(`progress-bar-${idx}`);
+  const progressText = document.getElementById(`progress-text-${idx}`);
+  const innerEl    = document.getElementById(`upload-inner-${idx}`);
 
-  // Show local preview immediately
-  previewEl.src = URL.createObjectURL(file);
+  // Show local preview immediately (feels instant)
+  const localUrl = URL.createObjectURL(file);
+  previewEl.src = localUrl;
   previewEl.style.display = 'block';
+  innerEl.style.display = 'none'; // hide icon/text once photo chosen
 
-  // Convert to base64 as fallback (used if Cloudinary not configured)
-  const reader = new FileReader();
-  reader.onload = e => {
-    photoUrls[idx] = e.target.result; // base64 fallback
-    progressEl.textContent = '✓ Photo ready';
-    progressEl.classList.add('show');
-  };
-  reader.readAsDataURL(file);
-
-  // Try Cloudinary upload if configured
-  if(CLOUD_NAME !== 'dummycloud'){
-    const url = await uploadToCloudinary(file, progressEl, previewEl);
-    if(url) photoUrls[idx] = url;
+  // Upload to Cloudinary
+  const uploadedUrl = await uploadToCloudinary(file, progressBar, progressText);
+  if(uploadedUrl) {
+    photoUrls[idx] = uploadedUrl;
+  } else {
+    // Fallback: base64
+    const b64 = await fileToBase64(file);
+    photoUrls[idx] = b64;
   }
 }
-
 function handleUrlInput(idx){
   const url = document.getElementById(`p-src-${idx}`).value.trim();
   if(url){
@@ -511,6 +559,8 @@ function handleUrlInput(idx){
     const previewEl = document.getElementById(`preview-${idx}`);
     previewEl.src = url;
     previewEl.style.display = 'block';
+    const innerEl = document.getElementById(`upload-inner-${idx}`);
+    if(innerEl) innerEl.style.display = 'none';
   }
 }
 
@@ -573,23 +623,43 @@ function collectData(){
 
   for(let i=0;i<letterCount;i++){
     if(!document.getElementById(`letter-${i}`)) continue;
-    data.letters.push({ label:v(`l-label-${i}`)||`Letter ${i+1}`, occasion:v(`l-occasion-${i}`)||'', seal:v(`l-seal-${i}`)||'💌', salutation:v(`l-salutation-${i}`)||'My dearest,', body:v(`l-body-${i}`)||'', closing:v(`l-closing-${i}`)||'With love' });
+    data.letters.push({
+      label:v(`l-label-${i}`)||`Letter ${i+1}`,
+      occasion:v(`l-occasion-${i}`)||'',
+      seal:v(`l-seal-${i}`)||'💌',
+      salutation:v(`l-salutation-${i}`)||'My dearest,',
+      body:v(`l-body-${i}`)||'',
+      closing:v(`l-closing-${i}`)||'With love'
+    });
   }
 
   for(let i=0;i<photoCount;i++){
     if(!document.getElementById(`photo-${i}`)) continue;
     const src = photoUrls[i] || v(`p-src-${i}`) || '';
-    data.photos.push({ src, caption:v(`p-caption-${i}`)||'', date:v(`p-date-${i}`)||'', desc:v(`p-desc-${i}`)||'' });
+    data.photos.push({
+      src,
+      caption:v(`p-caption-${i}`)||'',
+      date:v(`p-date-${i}`)||'',
+      desc:v(`p-desc-${i}`)||''
+    });
   }
 
   for(let i=0;i<timelineCount;i++){
     if(!document.getElementById(`tl-${i}`)) continue;
-    data.timeline.push({ date:v(`tl-date-${i}`)||'', title:v(`tl-title-${i}`)||'', text:v(`tl-text-${i}`)||'', emoji:v(`tl-emoji-${i}`)||'✨' });
+    data.timeline.push({
+      date:v(`tl-date-${i}`)||'',
+      title:v(`tl-title-${i}`)||'',
+      text:v(`tl-text-${i}`)||'',
+      emoji:v(`tl-emoji-${i}`)||'✨'
+    });
   }
 
   for(let i=0;i<stickyCount;i++){
     if(!document.getElementById(`st-${i}`)) continue;
-    data.stickies.push({ text:v(`st-text-${i}`)||'', color:v(`st-color-${i}`)||'#fff9c4' });
+    data.stickies.push({
+      text:v(`st-text-${i}`)||'',
+      color:v(`st-color-${i}`)||'#fff9c4'
+    });
   }
 
   return data;
@@ -598,10 +668,9 @@ function collectData(){
 function v(id){ const el=document.getElementById(id); return el?el.value.trim():''; }
 
 /* ══════════════════════════════════
-   GENERATE — save to Firestore, get short ID
+   GENERATE — save to Firestore, short URL
    ══════════════════════════════════ */
 function generateId(){
-  // 8-char random ID e.g. "k7x2m9pq"
   return Math.random().toString(36).slice(2,6) + Math.random().toString(36).slice(2,6);
 }
 
@@ -610,8 +679,8 @@ async function generatePage(){
   document.getElementById('genRecipient').textContent = data.recipient;
   document.getElementById('generatedUrl').textContent = 'Saving…';
 
-  // Show saving overlay
   document.getElementById('savingOverlay').classList.add('show');
+  document.getElementById('savingSubText').textContent = 'Saving to the cloud ✦';
 
   try {
     const id  = generateId();
@@ -637,7 +706,8 @@ function copyLink(){
   const url = document.getElementById('generatedUrl').textContent;
   navigator.clipboard.writeText(url).then(()=>{
     const btn = document.getElementById('copyBtn');
-    btn.textContent = 'Copied ✓'; btn.classList.add('copied');
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('copied');
     setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('copied'); }, 3000);
   });
 }
