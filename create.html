@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Your Memory Page — MemoryVault</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Dancing+Script:wght@500;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --rose:#c9748a;--rose-light:#f0d4dc;--rose-dark:#8a4a5e;
+  --blush:#f9eef1;--ivory:#fdf8f5;--ink:#2d2020;--muted:#8a7070;
+  --gold:#c8a96e;--gold-light:#f5ecd8;--warm-light:#ede0d4;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--ivory);color:var(--ink);min-height:100vh;}
+
+/* ── TOP BAR ── */
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(253,248,245,0.92);backdrop-filter:blur(16px);
+  border-bottom:1px solid rgba(201,116,138,0.12);
+  padding:16px 32px;display:flex;align-items:center;justify-content:space-between;
+}
+.topbar-logo{font-family:'Dancing Script',cursive;font-size:22px;color:var(--rose-dark);}
+.topbar-back{
+  font-size:13px;color:var(--muted);text-decoration:none;
+  display:flex;align-items:center;gap:6px;transition:color 0.2s;
+}
+.topbar-back:hover{color:var(--rose-dark);}
+
+/* ── PROGRESS ── */
+.progress-wrap{
+  position:fixed;top:60px;left:0;right:0;z-index:99;
+  background:rgba(253,248,245,0.95);backdrop-filter:blur(8px);
+  border-bottom:1px solid rgba(201,116,138,0.08);
+  padding:12px 32px;
+}
+.progress-steps{display:flex;align-items:center;gap:0;max-width:800px;margin:0 auto;}
+.pstep{
+  display:flex;align-items:center;gap:8px;flex:1;
+  cursor:pointer;padding:6px 0;position:relative;
+}
+.pstep-dot{
+  width:28px;height:28px;border-radius:50%;border:2px solid var(--rose-light);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;color:var(--muted);background:white;
+  transition:all 0.3s;flex-shrink:0;
+}
+.pstep.active .pstep-dot{background:var(--rose-dark);border-color:var(--rose-dark);color:white;}
+.pstep.done .pstep-dot{background:var(--rose-light);border-color:var(--rose);color:var(--rose-dark);}
+.pstep-label{font-size:11px;color:var(--muted);letter-spacing:0.05em;white-space:nowrap;}
+.pstep.active .pstep-label{color:var(--rose-dark);font-weight:500;}
+.pstep-line{flex:1;height:1px;background:var(--rose-light);margin:0 8px;}
+.pstep.done .pstep-line{background:var(--rose);}
+
+/* ── MAIN ── */
+.main{padding:140px 24px 80px;max-width:760px;margin:0 auto;}
+
+.step-panel{display:none;}
+.step-panel.active{display:block;animation:fadeSlide 0.4s ease;}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+
+.step-heading{
+  font-family:'Cormorant Garamond',serif;
+  font-size:40px;font-weight:300;color:var(--ink);margin-bottom:8px;
+}
+.step-heading em{color:var(--rose-dark);}
+.step-sub{font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:40px;}
+
+/* ── FORM ELEMENTS ── */
+.field{margin-bottom:24px;}
+.field label{display:block;font-size:13px;font-weight:500;color:var(--ink);margin-bottom:8px;letter-spacing:0.03em;}
+.field label span{color:var(--muted);font-weight:400;margin-left:4px;}
+input[type=text],input[type=password],input[type=url],
+input[type=email],textarea,select{
+  width:100%;background:white;
+  border:1.5px solid rgba(201,116,138,0.25);border-radius:12px;
+  padding:14px 18px;font-family:'Inter',sans-serif;font-size:15px;color:var(--ink);
+  outline:none;transition:border-color 0.25s,box-shadow 0.25s;
+  -webkit-appearance:none;
+}
+input:focus,textarea:focus,select:focus{
+  border-color:var(--rose);box-shadow:0 0 0 3px rgba(201,116,138,0.12);
+}
+textarea{resize:vertical;min-height:120px;line-height:1.7;}
+select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a7070' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;}
+
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:600px){.field-row{grid-template-columns:1fr;}}
+
+/* ── PHOTO ENTRY ── */
+.photo-entries{display:flex;flex-direction:column;gap:16px;}
+.photo-entry{
+  background:white;border:1.5px solid rgba(201,116,138,0.2);
+  border-radius:16px;padding:20px;position:relative;
+}
+.photo-entry-header{
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;
+}
+.photo-entry-num{
+  font-family:'Dancing Script',cursive;font-size:18px;color:var(--rose-dark);
+}
+.remove-btn{
+  background:none;border:none;cursor:pointer;font-size:18px;
+  color:var(--muted);transition:color 0.2s;padding:4px;
+}
+.remove-btn:hover{color:#c0392b;}
+.add-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:14px;border:1.5px dashed rgba(201,116,138,0.35);
+  border-radius:12px;background:none;cursor:pointer;
+  font-size:14px;color:var(--rose-dark);transition:background 0.2s,border-color 0.2s;
+  font-family:'Inter',sans-serif;
+}
+.add-btn:hover{background:var(--blush);border-color:var(--rose);}
+
+/* ── THEME PICKER ── */
+.theme-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-top:8px;}
+.theme-opt{
+  border:2px solid transparent;border-radius:14px;padding:16px 12px;
+  text-align:center;cursor:pointer;transition:all 0.25s;background:white;
+  box-shadow:0 2px 10px rgba(0,0,0,0.06);
+}
+.theme-opt:hover{transform:translateY(-3px);}
+.theme-opt.selected{border-color:var(--rose-dark);box-shadow:0 4px 20px rgba(138,74,94,0.2);}
+.theme-swatch{width:40px;height:40px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.theme-name{font-size:12px;color:var(--ink);font-weight:500;letter-spacing:0.03em;}
+
+/* ── NAV BUTTONS ── */
+.step-nav{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:40px;padding-top:32px;
+  border-top:1px solid rgba(201,116,138,0.12);
+}
+.btn-secondary{
+  background:none;border:1.5px solid rgba(201,116,138,0.3);border-radius:30px;
+  padding:12px 28px;font-size:15px;color:var(--rose-dark);cursor:pointer;
+  font-family:'Inter',sans-serif;transition:background 0.2s;
+}
+.btn-secondary:hover{background:var(--rose-light);}
+.btn-primary{
+  background:linear-gradient(135deg,var(--rose-dark),var(--rose));
+  border:none;border-radius:30px;padding:14px 36px;
+  font-size:15px;color:white;cursor:pointer;font-family:'Inter',sans-serif;
+  transition:transform 0.2s,box-shadow 0.2s;font-weight:500;
+  box-shadow:0 4px 16px rgba(138,74,94,0.3);
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(138,74,94,0.4);}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+
+/* ── LETTER ENTRIES ── */
+.letter-entries{display:flex;flex-direction:column;gap:16px;}
+.letter-entry{background:white;border:1.5px solid rgba(201,116,138,0.2);border-radius:16px;padding:24px;}
+
+/* ── TIMELINE ENTRIES ── */
+.timeline-entries{display:flex;flex-direction:column;gap:12px;}
+.timeline-entry-form{
+  background:white;border:1.5px solid rgba(201,116,138,0.2);
+  border-radius:12px;padding:16px 20px;display:grid;
+  grid-template-columns:140px 1fr auto;gap:12px;align-items:start;
+}
+@media(max-width:600px){.timeline-entry-form{grid-template-columns:1fr;}}
+
+/* ── STICKY ENTRIES ── */
+.sticky-entries{display:flex;flex-direction:column;gap:12px;}
+.sticky-entry-form{
+  background:white;border:1.5px solid rgba(201,116,138,0.2);
+  border-radius:12px;padding:16px 20px;
+  display:grid;grid-template-columns:1fr 120px auto;gap:12px;align-items:start;
+}
+@media(max-width:600px){.sticky-entry-form{grid-template-columns:1fr;}}
+
+/* ── GENERATE SCREEN ── */
+.generate-box{
+  background:linear-gradient(160deg,#1a0a0e,#2d1018);
+  border-radius:24px;padding:60px 48px;text-align:center;
+  box-shadow:0 24px 80px rgba(0,0,0,0.2);
+}
+.generate-icon{font-size:56px;margin-bottom:24px;}
+.generate-title{
+  font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:300;font-style:italic;
+  color:#f5dde4;margin-bottom:16px;
+}
+.generate-sub{font-size:15px;color:rgba(245,221,228,0.6);line-height:1.8;margin-bottom:40px;}
+.generate-link-box{
+  background:rgba(255,255,255,0.07);border:1px solid rgba(201,116,138,0.3);
+  border-radius:12px;padding:18px 20px;
+  display:flex;align-items:center;gap:12px;margin-bottom:20px;
+}
+.generate-link-url{
+  flex:1;font-size:13px;color:rgba(245,221,228,0.8);word-break:break-all;text-align:left;
+  font-family:'Inter',sans-serif;
+}
+.copy-btn{
+  background:var(--rose-dark);color:white;border:none;border-radius:8px;
+  padding:10px 18px;font-size:13px;cursor:pointer;white-space:nowrap;
+  font-family:'Inter',sans-serif;transition:background 0.2s;flex-shrink:0;
+}
+.copy-btn:hover{background:var(--rose);}
+.copy-btn.copied{background:#2e7d32;}
+.generate-note{font-size:13px;color:rgba(201,116,138,0.5);line-height:1.7;}
+.btn-preview{
+  display:inline-block;margin-top:24px;
+  background:rgba(255,255,255,0.08);border:1px solid rgba(201,116,138,0.3);
+  color:rgba(245,221,228,0.8);border-radius:30px;
+  padding:12px 32px;font-size:14px;text-decoration:none;
+  transition:background 0.2s;cursor:pointer;font-family:'Inter',sans-serif;
+}
+.btn-preview:hover{background:rgba(255,255,255,0.14);}
+.btn-new{
+  display:inline-block;margin-top:12px;
+  color:rgba(201,116,138,0.6);font-size:13px;cursor:pointer;
+  text-decoration:underline;text-underline-offset:3px;
+  background:none;border:none;font-family:'Inter',sans-serif;
+}
+
+/* ── PROGRESS BAR LOADING ── */
+.spinner{
+  width:40px;height:40px;border:3px solid rgba(201,116,138,0.2);
+  border-top-color:var(--rose);border-radius:50%;
+  animation:spin 0.8s linear infinite;margin:0 auto 24px;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">MemoryVault</div>
+  <a href="index.html" class="topbar-back">← Back to home</a>
+</div>
+
+<!-- PROGRESS BAR -->
+<div class="progress-wrap">
+  <div class="progress-steps" id="progressSteps">
+    <div class="pstep active" onclick="goToStep(0)">
+      <div class="pstep-dot">1</div>
+      <div class="pstep-label">Basics</div>
+    </div>
+    <div class="pstep-line"></div>
+    <div class="pstep" onclick="goToStep(1)">
+      <div class="pstep-dot">2</div>
+      <div class="pstep-label">Letters</div>
+    </div>
+    <div class="pstep-line"></div>
+    <div class="pstep" onclick="goToStep(2)">
+      <div class="pstep-dot">3</div>
+      <div class="pstep-label">Gallery</div>
+    </div>
+    <div class="pstep-line"></div>
+    <div class="pstep" onclick="goToStep(3)">
+      <div class="pstep-dot">4</div>
+      <div class="pstep-label">Timeline</div>
+    </div>
+    <div class="pstep-line"></div>
+    <div class="pstep" onclick="goToStep(4)">
+      <div class="pstep-dot">5</div>
+      <div class="pstep-label">Notes</div>
+    </div>
+    <div class="pstep-line"></div>
+    <div class="pstep" onclick="goToStep(5)">
+      <div class="pstep-dot">6</div>
+      <div class="pstep-label">Style</div>
+    </div>
+    <div class="pstep-line"></div>
+    <div class="pstep" onclick="goToStep(6)">
+      <div class="pstep-dot">✦</div>
+      <div class="pstep-label">Generate</div>
+    </div>
+  </div>
+</div>
+
+<main class="main">
+
+  <!-- ══ STEP 0: BASICS ══ -->
+  <div class="step-panel active" id="step-0">
+    <h2 class="step-heading">Let's start with the <em>basics</em></h2>
+    <p class="step-sub">Tell us who this page is for and set up the password they'll use to open it.</p>
+
+    <div class="field">
+      <label>Recipient's name <span>(the person receiving this)</span></label>
+      <input type="text" id="recipientName" placeholder="e.g. Sofia, my love, babe…">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Your name <span>(the creator)</span></label>
+        <input type="text" id="creatorName" placeholder="e.g. Marco">
+      </div>
+      <div class="field">
+        <label>Page title <span>(optional)</span></label>
+        <input type="text" id="pageTitle" placeholder="e.g. Our Memories">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Password <span>(they'll use this to open the page)</span></label>
+        <input type="text" id="pagePassword" placeholder="e.g. iloveyou, sofia2024…">
+      </div>
+      <div class="field">
+        <label>Password hint <span>(shown on the lock screen)</span></label>
+        <input type="text" id="passwordHint" placeholder="e.g. The day we met…">
+      </div>
+    </div>
+    <div class="field">
+      <label>Welcome message <span>(shown on the lock screen)</span></label>
+      <textarea id="lockMessage" rows="2" placeholder="This place holds memories made just for you…"></textarea>
+    </div>
+    <div class="field">
+      <label>Background music URL <span>(optional — link to an MP3 file)</span></label>
+      <input type="url" id="musicUrl" placeholder="https://example.com/oursong.mp3">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Song title</label>
+        <input type="text" id="musicTitle" placeholder="e.g. Our Song">
+      </div>
+      <div class="field">
+        <label>Artist name</label>
+        <input type="text" id="musicArtist" placeholder="e.g. Taylor Swift">
+      </div>
+    </div>
+
+    <div class="step-nav">
+      <div></div>
+      <button class="btn-primary" onclick="nextStep()">Next: Write Letters →</button>
+    </div>
+  </div>
+
+  <!-- ══ STEP 1: LETTERS ══ -->
+  <div class="step-panel" id="step-1">
+    <h2 class="step-heading">Your <em>letters</em></h2>
+    <p class="step-sub">Write one or more heartfelt letters. Each appears in a clickable envelope on the page. You can add up to 6.</p>
+
+    <div class="letter-entries" id="letterEntries"></div>
+    <button class="add-btn" onclick="addLetter()" id="addLetterBtn">+ Add another letter</button>
+
+    <div class="step-nav">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="nextStep()">Next: Add Photos →</button>
+    </div>
+  </div>
+
+  <!-- ══ STEP 2: GALLERY ══ -->
+  <div class="step-panel" id="step-2">
+    <h2 class="step-heading">Photo <em>gallery</em></h2>
+    <p class="step-sub">Add photo URLs with captions and memories. Use image hosting like Imgur, Google Photos (direct link), or any public image URL. You can add up to 12.</p>
+
+    <div class="photo-entries" id="photoEntries"></div>
+    <button class="add-btn" onclick="addPhoto()" id="addPhotoBtn">+ Add another photo</button>
+
+    <div class="step-nav">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="nextStep()">Next: Timeline →</button>
+    </div>
+  </div>
+
+  <!-- ══ STEP 3: TIMELINE ══ -->
+  <div class="step-panel" id="step-3">
+    <h2 class="step-heading">Memory <em>timeline</em></h2>
+    <p class="step-sub">Add the milestones of your story — big and small. Each entry appears as an animated card on a scrolling timeline.</p>
+
+    <div class="timeline-entries" id="timelineEntries"></div>
+    <button class="add-btn" onclick="addTimeline()">+ Add another moment</button>
+
+    <div class="step-nav">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="nextStep()">Next: Sticky Notes →</button>
+    </div>
+  </div>
+
+  <!-- ══ STEP 4: STICKY NOTES ══ -->
+  <div class="step-panel" id="step-4">
+    <h2 class="step-heading">Little <em>notes</em></h2>
+    <p class="step-sub">Short things you never want to forget — inside jokes, quotes, tiny moments. They appear as colorful sticky notes.</p>
+
+    <div class="sticky-entries" id="stickyEntries"></div>
+    <button class="add-btn" onclick="addSticky()">+ Add another note</button>
+
+    <div class="step-nav">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="nextStep()">Next: Style →</button>
+    </div>
+  </div>
+
+  <!-- ══ STEP 5: THEME ══ -->
+  <div class="step-panel" id="step-5">
+    <h2 class="step-heading">Choose your <em>style</em></h2>
+    <p class="step-sub">Pick a color theme that feels right for this page.</p>
+
+    <div class="theme-grid" id="themeGrid"></div>
+
+    <div style="margin-top:40px">
+      <div class="field">
+        <label>Final message <span>(shown at the very end of the page)</span></label>
+        <textarea id="finalMessage" rows="5" placeholder="If you've made it all the way here — you know how much you mean to me…"></textarea>
+      </div>
+      <div class="field">
+        <label>Closing signature</label>
+        <input type="text" id="finalSign" placeholder="e.g. Forever yours 🌹, With all my love…">
+      </div>
+    </div>
+
+    <div class="step-nav">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="nextStep()">Generate My Page ✦</button>
+    </div>
+  </div>
+
+  <!-- ══ STEP 6: GENERATE ══ -->
+  <div class="step-panel" id="step-6">
+    <div class="generate-box" id="generateBox">
+      <div class="generate-icon">🌹</div>
+      <div class="generate-title">Your memory page is ready.</div>
+      <p class="generate-sub">
+        Copy the link below and send it to <span id="genRecipient">them</span>.<br>
+        They'll enter the password you set to step inside.
+      </p>
+      <div class="generate-link-box">
+        <div class="generate-link-url" id="generatedUrl">Generating…</div>
+        <button class="copy-btn" id="copyBtn" onclick="copyLink()">Copy</button>
+      </div>
+      <p class="generate-note">
+        📌 Save this link — it contains all your content.<br>
+        No account or server needed. The link works anywhere.
+      </p>
+      <br>
+      <a id="previewBtn" class="btn-preview" target="_blank">Open Preview ↗</a>
+      <br>
+      <button class="btn-new" onclick="startOver()">Create a new page</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+/* ══════════════════════════════════
+   THEMES
+   ══════════════════════════════════ */
+const THEMES = [
+  { id:'rose',    name:'Rose',    emoji:'🌹', primary:'#c9748a', dark:'#8a4a5e', light:'#f0d4dc', bg:'#f9eef1' },
+  { id:'ocean',   name:'Ocean',   emoji:'🌊', primary:'#5b8db8', dark:'#2c5f8a', light:'#d4e8f5', bg:'#eef5fb' },
+  { id:'forest',  name:'Forest',  emoji:'🌿', primary:'#5a8a6a', dark:'#2e5e40', light:'#d4eedd', bg:'#eef7f1' },
+  { id:'gold',    name:'Gold',    emoji:'✨', primary:'#c8a96e', dark:'#8a6e3a', light:'#f5ecd8', bg:'#fdf8ef' },
+  { id:'lavender',name:'Lavender',emoji:'💜', primary:'#9b7ec8', dark:'#6a4e9e', light:'#e8daf5', bg:'#f5eefb' },
+  { id:'blush',   name:'Blush',   emoji:'🌸', primary:'#e89cb0', dark:'#b06080', light:'#fce0ea', bg:'#fff0f4' },
+];
+
+let selectedTheme = 'rose';
+
+function buildThemeGrid(){
+  const g = document.getElementById('themeGrid');
+  THEMES.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'theme-opt' + (t.id === selectedTheme ? ' selected' : '');
+    el.innerHTML = `
+      <div class="theme-swatch" style="background:linear-gradient(135deg,${t.light},${t.primary})">${t.emoji}</div>
+      <div class="theme-name">${t.name}</div>`;
+    el.onclick = () => {
+      document.querySelectorAll('.theme-opt').forEach(x => x.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedTheme = t.id;
+    };
+    g.appendChild(el);
+  });
+}
+
+/* ══════════════════════════════════
+   STEP NAVIGATION
+   ══════════════════════════════════ */
+let currentStep = 0;
+const TOTAL_STEPS = 7;
+
+function goToStep(n){
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`step-${n}`).classList.add('active');
+
+  const psteps = document.querySelectorAll('.pstep');
+  psteps.forEach((p, i) => {
+    p.classList.remove('active','done');
+    if(i === n) p.classList.add('active');
+    else if(i < n) p.classList.add('done');
+  });
+
+  currentStep = n;
+  window.scrollTo({top:0,behavior:'smooth'});
+
+  if(n === 6) generatePage();
+}
+
+function nextStep(){ if(currentStep < TOTAL_STEPS-1) goToStep(currentStep+1); }
+function prevStep(){ if(currentStep > 0) goToStep(currentStep-1); }
+
+/* ══════════════════════════════════
+   DYNAMIC ENTRIES
+   ══════════════════════════════════ */
+
+// — LETTERS —
+let letterCount = 0;
+function addLetter(){
+  if(letterCount >= 6){ alert('Maximum 6 letters allowed.'); return; }
+  const idx = letterCount++;
+  const container = document.getElementById('letterEntries');
+  const div = document.createElement('div');
+  div.className = 'letter-entry';
+  div.id = `letter-${idx}`;
+  div.innerHTML = `
+    <div class="photo-entry-header">
+      <div class="photo-entry-num">Letter ${idx+1}</div>
+      <button class="remove-btn" onclick="removeEntry('letter-${idx}','letterCount')">✕</button>
+    </div>
+    <div class="field">
+      <label>Label <span>(shown on the envelope)</span></label>
+      <input type="text" id="l-label-${idx}" placeholder="e.g. The First Letter, A Letter for the Hard Days…">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Occasion <span>(small text above label)</span></label>
+        <input type="text" id="l-occasion-${idx}" placeholder="e.g. In the early days">
+      </div>
+      <div class="field">
+        <label>Seal emoji</label>
+        <input type="text" id="l-seal-${idx}" placeholder="💌" style="max-width:80px">
+      </div>
+    </div>
+    <div class="field">
+      <label>Salutation</label>
+      <input type="text" id="l-salutation-${idx}" placeholder="e.g. My dearest,">
+    </div>
+    <div class="field">
+      <label>Letter body</label>
+      <textarea id="l-body-${idx}" rows="6" placeholder="Write your letter here…"></textarea>
+    </div>
+    <div class="field">
+      <label>Closing</label>
+      <input type="text" id="l-closing-${idx}" placeholder="e.g. With all my love">
+    </div>`;
+  container.appendChild(div);
+  document.getElementById('addLetterBtn').style.display = letterCount >= 6 ? 'none' : 'flex';
+}
+
+// — PHOTOS —
+let photoCount = 0;
+function addPhoto(){
+  if(photoCount >= 12){ alert('Maximum 12 photos allowed.'); return; }
+  const idx = photoCount++;
+  const container = document.getElementById('photoEntries');
+  const div = document.createElement('div');
+  div.className = 'photo-entry';
+  div.id = `photo-${idx}`;
+  div.innerHTML = `
+    <div class="photo-entry-header">
+      <div class="photo-entry-num">Photo ${idx+1}</div>
+      <button class="remove-btn" onclick="removeEntry('photo-${idx}','photoCount')">✕</button>
+    </div>
+    <div class="field">
+      <label>Image URL</label>
+      <input type="url" id="p-src-${idx}" placeholder="https://i.imgur.com/yourphoto.jpg">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Caption</label>
+        <input type="text" id="p-caption-${idx}" placeholder="The day everything changed">
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="text" id="p-date-${idx}" placeholder="March 2023">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Location</label>
+        <input type="text" id="p-location-${idx}" placeholder="By the sea">
+      </div>
+      <div class="field">
+        <label>Taller card? <span>(for portrait photos)</span></label>
+        <select id="p-tall-${idx}">
+          <option value="false">Normal</option>
+          <option value="true">Tall</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Memory note <span>(shown in the lightbox)</span></label>
+      <textarea id="p-desc-${idx}" rows="2" placeholder="I remember how the light fell that day…"></textarea>
+    </div>`;
+  container.appendChild(div);
+  document.getElementById('addPhotoBtn').style.display = photoCount >= 12 ? 'none' : 'flex';
+}
+
+// — TIMELINE —
+let timelineCount = 0;
+const timelineEmojis = ['✨','💬','🌊','🍂','❄️','🌱','💌','🎉','🌙','☕','🌅','🎵'];
+function addTimeline(){
+  const idx = timelineCount++;
+  const container = document.getElementById('timelineEntries');
+  const div = document.createElement('div');
+  div.className = 'timeline-entry-form';
+  div.id = `tl-${idx}`;
+  div.innerHTML = `
+    <div class="field" style="margin:0">
+      <label style="margin-bottom:4px">Date / Period</label>
+      <input type="text" id="tl-date-${idx}" placeholder="Summer 2023">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="field" style="margin:0">
+        <label style="margin-bottom:4px">Title</label>
+        <input type="text" id="tl-title-${idx}" placeholder="When We First Met">
+      </div>
+      <div class="field" style="margin:0">
+        <label style="margin-bottom:4px">Story</label>
+        <textarea id="tl-text-${idx}" rows="2" placeholder="What happened…" style="min-height:60px"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;align-items:center">
+      <select id="tl-emoji-${idx}" style="width:70px;text-align:center;font-size:20px;padding:8px 4px;">
+        ${timelineEmojis.map(e=>`<option value="${e}">${e}</option>`).join('')}
+      </select>
+      <button class="remove-btn" onclick="removeEntry('tl-${idx}')">✕</button>
+    </div>`;
+  container.appendChild(div);
+}
+
+// — STICKIES —
+let stickyCount = 0;
+const stickyColors = [
+  {label:'Yellow',value:'#fff9c4'},
+  {label:'Pink',value:'#fce4ec'},
+  {label:'Green',value:'#e8f5e9'},
+  {label:'Blue',value:'#e3f2fd'},
+  {label:'Purple',value:'#f3e5f5'},
+  {label:'Peach',value:'#fbe9e7'},
+];
+function addSticky(){
+  const idx = stickyCount++;
+  const container = document.getElementById('stickyEntries');
+  const div = document.createElement('div');
+  div.className = 'sticky-entry-form';
+  div.id = `st-${idx}`;
+  div.innerHTML = `
+    <div class="field" style="margin:0">
+      <label style="margin-bottom:4px">Note</label>
+      <textarea id="st-text-${idx}" rows="3" placeholder="The way you laugh when something genuinely surprises you…" style="min-height:80px"></textarea>
+    </div>
+    <div class="field" style="margin:0">
+      <label style="margin-bottom:4px">Color</label>
+      <select id="st-color-${idx}">
+        ${stickyColors.map(c=>`<option value="${c.value}">${c.label}</option>`).join('')}
+      </select>
+    </div>
+    <button class="remove-btn" onclick="removeEntry('st-${idx}')" style="margin-top:24px">✕</button>`;
+  container.appendChild(div);
+}
+
+function removeEntry(id){
+  const el = document.getElementById(id);
+  if(el) el.remove();
+}
+
+/* ══════════════════════════════════
+   COLLECT FORM DATA
+   ══════════════════════════════════ */
+function collectData(){
+  const data = {
+    recipient: v('recipientName') || 'my love',
+    creator:   v('creatorName')   || 'Someone who loves you',
+    title:     v('pageTitle')     || 'Our Memories',
+    password:  v('pagePassword')  || 'iloveyou',
+    hint:      v('passwordHint')  || '',
+    lockMsg:   v('lockMessage')   || 'This place holds memories made just for you.',
+    music:     { title: v('musicTitle')||'Our Song', artist: v('musicArtist')||'', src: v('musicUrl')||'' },
+    theme:     selectedTheme,
+    finalMsg:  v('finalMessage')  || 'If you\'ve made it all the way here — you know how much you mean to me.',
+    finalSign: v('finalSign')     || 'Forever yours 🌹',
+    letters:   [],
+    photos:    [],
+    timeline:  [],
+    stickies:  [],
+  };
+
+  // letters
+  for(let i=0;i<letterCount;i++){
+    const el = document.getElementById(`letter-${i}`);
+    if(!el) continue;
+    data.letters.push({
+      label:      v(`l-label-${i}`)      || `Letter ${i+1}`,
+      occasion:   v(`l-occasion-${i}`)   || '',
+      seal:       v(`l-seal-${i}`)       || '💌',
+      salutation: v(`l-salutation-${i}`) || 'My dearest,',
+      body:       v(`l-body-${i}`)       || '',
+      closing:    v(`l-closing-${i}`)    || 'With love',
+    });
+  }
+
+  // photos
+  for(let i=0;i<photoCount;i++){
+    const el = document.getElementById(`photo-${i}`);
+    if(!el) continue;
+    data.photos.push({
+      src:      v(`p-src-${i}`)      || '',
+      caption:  v(`p-caption-${i}`)  || '',
+      date:     v(`p-date-${i}`)     || '',
+      location: v(`p-location-${i}`) || '',
+      desc:     v(`p-desc-${i}`)     || '',
+      tall:     v(`p-tall-${i}`)     === 'true',
+    });
+  }
+
+  // timeline
+  for(let i=0;i<timelineCount;i++){
+    const el = document.getElementById(`tl-${i}`);
+    if(!el) continue;
+    data.timeline.push({
+      date:  v(`tl-date-${i}`)  || '',
+      title: v(`tl-title-${i}`) || '',
+      text:  v(`tl-text-${i}`)  || '',
+      emoji: v(`tl-emoji-${i}`) || '✨',
+    });
+  }
+
+  // stickies
+  for(let i=0;i<stickyCount;i++){
+    const el = document.getElementById(`st-${i}`);
+    if(!el) continue;
+    data.stickies.push({
+      text:  v(`st-text-${i}`)  || '',
+      color: v(`st-color-${i}`) || '#fff9c4',
+    });
+  }
+
+  return data;
+}
+
+function v(id){
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+/* ══════════════════════════════════
+   GENERATE PAGE
+   ══════════════════════════════════ */
+function generatePage(){
+  const data = collectData();
+  document.getElementById('genRecipient').textContent = data.recipient;
+
+  // Compress data to URL-safe base64
+  const json    = JSON.stringify(data);
+  const encoded = btoa(unescape(encodeURIComponent(json)));
+
+  // Build the shareable URL pointing to view.html
+  const base = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
+  const url     = `${base}view.html?d=${encoded}`;
+
+  document.getElementById('generatedUrl').textContent = url;
+  document.getElementById('previewBtn').href          = url;
+  document.getElementById('copyBtn').textContent      = 'Copy';
+  document.getElementById('copyBtn').classList.remove('copied');
+}
+
+function copyLink(){
+  const url = document.getElementById('generatedUrl').textContent;
+  navigator.clipboard.writeText(url).then(()=>{
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('copied'); }, 3000);
+  });
+}
+
+function startOver(){
+  if(confirm('Start fresh? This will clear everything.')){
+    window.location.reload();
+  }
+}
+
+/* ══════════════════════════════════
+   INIT
+   ══════════════════════════════════ */
+// Seed default entries so the form isn't empty
+addLetter();
+addPhoto();
+addTimeline();
+addTimeline();
+addSticky();
+addSticky();
+buildThemeGrid();
+</script>
+</body>
+</html>
