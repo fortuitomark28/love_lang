@@ -290,6 +290,15 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 }
 
 /* ── PROGRESS BAR LOADING ── */
+.saving-overlay{
+  position:fixed;inset:0;z-index:9999;
+  background:rgba(253,248,245,0.92);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;
+}
+.saving-overlay.show{display:flex;}
+.saving-text{font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--rose-dark);}
+.saving-sub{font-size:13px;color:var(--muted);}
+
 .spinner{
   width:40px;height:40px;border:3px solid rgba(201,116,138,0.2);
   border-top-color:var(--rose);border-radius:50%;
@@ -299,6 +308,12 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 </style>
 </head>
 <body>
+
+<div class="saving-overlay" id="savingOverlay">
+  <div class="spinner"></div>
+  <div class="saving-text">Creating your short link...</div>
+  <div class="saving-sub" id="savingSubText">Saving everything to the cloud</div>
+</div>
 
 <div class="topbar">
   <div class="topbar-logo">MemoryVault</div>
@@ -378,7 +393,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
     </div>
     <div class="field">
       <label>Custom link name <span>(optional)</span></label>
-      <input type="text" id="customSlug" placeholder="e.g. mark-and-sofia" oninput="formatCustomSlugInput(this)">
+      <input type="text" id="customSlug" placeholder="e.g. our-memory-page" oninput="formatCustomSlugInput(this)">
     </div>
     <div class="field">
       <label>Welcome message <span>(shown on the lock screen)</span></label>
@@ -498,10 +513,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
         <div class="generate-link-url" id="generatedUrl">Generating…</div>
         <button class="copy-btn" id="copyBtn" onclick="copyLink()">Copy</button>
       </div>
-      <p class="generate-note">
-        📌 Save this link — it contains all your content.<br>
-        No account or server needed. The link works anywhere.
-      </p>
+      <p class="generate-note">Save this short link. It works anywhere once the page is saved.</p>
       <br>
       <a id="previewBtn" class="btn-preview" target="_blank">Open Preview ↗</a>
       <br>
@@ -510,6 +522,33 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   </div>
 
 </main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCvbC25h7KshisLKVhXnX1-KEBMXSR742k",
+  authDomain: "lovelang-34ad4.firebaseapp.com",
+  projectId: "lovelang-34ad4",
+  storageBucket: "lovelang-34ad4.firebasestorage.app",
+  messagingSenderId: "502873697484",
+  appId: "1:502873697484:web:35a698f8818de2d297a669",
+  measurementId: "G-754GR5BVQM"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+window._pageIdExists = async function(id) {
+  const snap = await getDoc(doc(db, "pages", id));
+  return snap.exists();
+};
+
+window._saveToFirestore = async function(id, data) {
+  await setDoc(doc(db, "pages", id), data);
+};
+</script>
 
 <script>
 /* ══════════════════════════════════
@@ -525,6 +564,7 @@ const THEMES = [
 ];
 
 let selectedTheme = 'rose';
+let generatedPageId = '';
 
 const CLOUD_NAME = 'dqjonsluh';
 const UPLOAD_PRESET = 'lovelang';
@@ -980,26 +1020,71 @@ function v(id){
 /* ══════════════════════════════════
    GENERATE PAGE
    ══════════════════════════════════ */
-function generatePage(){
+function formatCustomSlugInput(input){
+  input.value = makeSlug(input.value);
+}
+
+function makeSlug(value){
+  return String(value || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+}
+
+function generateId(){
+  return Math.random().toString(36).slice(2, 6) + Math.random().toString(36).slice(2, 6);
+}
+
+async function generatePage(){
   const data = collectData();
   document.getElementById('genRecipient').textContent = data.recipient;
-
-  // Compress data to URL-safe base64
-  const json    = JSON.stringify(data);
-  const encoded = btoa(unescape(encodeURIComponent(json)));
-
-  // Build the shareable URL pointing to view.html
-    const base = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
-  const url     = `${base}view.html?d=${encodeURIComponent(encoded)}`;
-
-  document.getElementById('generatedUrl').textContent = url;
-  document.getElementById('previewBtn').href          = url;
-  document.getElementById('copyBtn').textContent      = 'Copy';
+  document.getElementById('generatedUrl').textContent = 'Saving...';
+  document.getElementById('previewBtn').removeAttribute('href');
+  document.getElementById('copyBtn').textContent = 'Copy';
   document.getElementById('copyBtn').classList.remove('copied');
+
+  const overlay = document.getElementById('savingOverlay');
+  const savingSub = document.getElementById('savingSubText');
+  overlay?.classList.add('show');
+  if(savingSub) savingSub.textContent = 'Saving everything to the cloud';
+
+  try {
+    if(!window._saveToFirestore || !window._pageIdExists){
+      throw new Error('Cloud saving is not ready yet. Please try again.');
+    }
+
+    const requestedSlug = makeSlug(v('customSlug'));
+    const id = requestedSlug || generatedPageId || generateId();
+
+    if(id.length < 3){
+      throw new Error('Custom link name must be at least 3 characters.');
+    }
+
+    if(id !== generatedPageId && await window._pageIdExists(id)){
+      throw new Error(`The custom link "${id}" is already taken. Try another one.`);
+    }
+
+    await window._saveToFirestore(id, data);
+    generatedPageId = id;
+
+    const base = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
+    const url = `${base}view.html?id=${encodeURIComponent(id)}`;
+
+    document.getElementById('generatedUrl').textContent = url;
+    document.getElementById('previewBtn').href = url;
+  } catch(e) {
+    console.error(e);
+    document.getElementById('generatedUrl').textContent = e.message || 'Error saving. Please try again.';
+  } finally {
+    overlay?.classList.remove('show');
+  }
 }
 
 function copyLink(){
   const url = document.getElementById('generatedUrl').textContent;
+  if(!/^https?:\/\//.test(url)) return;
   navigator.clipboard.writeText(url).then(()=>{
     const btn = document.getElementById('copyBtn');
     btn.textContent = 'Copied ✓';
