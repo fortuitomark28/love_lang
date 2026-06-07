@@ -108,6 +108,78 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   color:var(--muted);transition:color 0.2s;padding:4px;
 }
 .remove-btn:hover{color:#c0392b;}
+.upload-panel{
+  border:1.5px dashed rgba(201,116,138,0.38);
+  border-radius:14px;
+  background:var(--blush);
+  padding:16px;
+  margin-bottom:18px;
+}
+.upload-actions{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.upload-btn{
+  border:none;
+  border-radius:12px;
+  background:linear-gradient(135deg,var(--rose-dark),var(--rose));
+  color:white;
+  cursor:pointer;
+  font-family:'Inter',sans-serif;
+  font-size:14px;
+  font-weight:500;
+  min-height:46px;
+  padding:0 20px;
+  box-shadow:0 4px 14px rgba(138,74,94,0.24);
+  transition:transform 0.2s,box-shadow 0.2s,opacity 0.2s;
+}
+.upload-btn:hover{transform:translateY(-1px);box-shadow:0 7px 20px rgba(138,74,94,0.3);}
+.upload-btn:disabled{opacity:0.62;cursor:not-allowed;transform:none;box-shadow:none;}
+.upload-copy{font-size:12px;color:var(--muted);line-height:1.55;flex:1;min-width:180px;}
+.upload-input{display:none;}
+.upload-preview-wrap{
+  display:none;
+  margin-top:14px;
+  border-radius:12px;
+  overflow:hidden;
+  background:white;
+  border:1px solid rgba(201,116,138,0.16);
+}
+.upload-preview-wrap.show{display:block;}
+.upload-preview{
+  display:block;
+  width:100%;
+  height:180px;
+  object-fit:cover;
+  background:var(--rose-light);
+}
+.upload-progress-wrap{display:none;margin-top:12px;}
+.upload-progress-wrap.show{display:block;}
+.upload-progress-bar-bg{
+  height:5px;
+  border-radius:999px;
+  overflow:hidden;
+  background:rgba(201,116,138,0.18);
+}
+.upload-progress-bar{
+  width:0%;
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg,var(--rose-dark),var(--rose));
+  transition:width 0.2s ease;
+}
+.upload-progress-text{font-size:12px;color:var(--muted);margin-top:7px;}
+.upload-progress-text.success{color:#2e7d32;}
+.upload-progress-text.error{color:#c0392b;}
+@media(max-width:600px){
+  .upload-panel{padding:14px;}
+  .upload-actions{align-items:stretch;flex-direction:column;}
+  .upload-btn{width:100%;}
+  .upload-copy{min-width:0;}
+  .upload-preview{height:220px;}
+}
 .add-btn{
   display:flex;align-items:center;justify-content:center;gap:8px;
   width:100%;padding:14px;border:1.5px dashed rgba(201,116,138,0.35);
@@ -346,7 +418,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   <!-- ══ STEP 2: GALLERY ══ -->
   <div class="step-panel" id="step-2">
     <h2 class="step-heading">Photo <em>gallery</em></h2>
-    <p class="step-sub">Add photo URLs with captions and memories. Use image hosting like Imgur, Google Photos (direct link), or any public image URL. You can add up to 12.</p>
+    <p class="step-sub">Upload photos from your phone, camera, or computer. The Cloudinary URL will fill in automatically, and you can still paste a public image URL manually. You can add up to 12.</p>
 
     <div class="photo-entries" id="photoEntries"></div>
     <button class="add-btn" onclick="addPhoto()" id="addPhotoBtn">+ Add another photo</button>
@@ -450,6 +522,9 @@ const THEMES = [
 
 let selectedTheme = 'rose';
 
+const CLOUD_NAME = 'dqjonsluh';
+const UPLOAD_PRESET = 'lovelang';
+
 function buildThemeGrid(){
   const g = document.getElementById('themeGrid');
   THEMES.forEach(t => {
@@ -543,9 +618,11 @@ function addLetter(){
 
 // — PHOTOS —
 let photoCount = 0;
+const photoUrls = {};
 function addPhoto(){
   if(photoCount >= 12){ alert('Maximum 12 photos allowed.'); return; }
   const idx = photoCount++;
+  photoUrls[idx] = '';
   const container = document.getElementById('photoEntries');
   const div = document.createElement('div');
   div.className = 'photo-entry';
@@ -555,9 +632,25 @@ function addPhoto(){
       <div class="photo-entry-num">Photo ${idx+1}</div>
       <button class="remove-btn" onclick="removeEntry('photo-${idx}','photoCount')">✕</button>
     </div>
+    <div class="upload-panel">
+      <div class="upload-actions">
+        <button type="button" class="upload-btn" id="upload-btn-${idx}" onclick="pickPhoto(${idx})">Upload Image</button>
+        <div class="upload-copy">Choose from your phone gallery, camera, desktop, or files. The Cloudinary URL will appear below.</div>
+        <input class="upload-input" type="file" id="p-file-${idx}" accept="image/*" onchange="handlePhotoFile(event,${idx})">
+      </div>
+      <div class="upload-preview-wrap" id="preview-wrap-${idx}">
+        <img class="upload-preview" id="preview-${idx}" alt="Selected image preview">
+      </div>
+      <div class="upload-progress-wrap" id="progress-wrap-${idx}">
+        <div class="upload-progress-bar-bg">
+          <div class="upload-progress-bar" id="progress-bar-${idx}"></div>
+        </div>
+        <div class="upload-progress-text" id="progress-text-${idx}"></div>
+      </div>
+    </div>
     <div class="field">
-      <label>Image URL</label>
-      <input type="url" id="p-src-${idx}" placeholder="https://i.imgur.com/yourphoto.jpg">
+      <label>Image URL <span>(auto-filled after upload, or paste one manually)</span></label>
+      <input type="url" id="p-src-${idx}" placeholder="https://res.cloudinary.com/..." oninput="handlePhotoUrlInput(${idx})">
     </div>
     <div class="field-row">
       <div class="field">
@@ -591,6 +684,147 @@ function addPhoto(){
 }
 
 // — TIMELINE —
+function pickPhoto(idx){
+  document.getElementById(`p-file-${idx}`)?.click();
+}
+
+async function handlePhotoFile(event, idx){
+  const input = event.target;
+  const file = input.files && input.files[0];
+  if(!file) return;
+
+  if(!file.type || !file.type.startsWith('image/')){
+    showUploadStatus(idx, 'Please choose an image file.', 'error');
+    input.value = '';
+    return;
+  }
+
+  const localUrl = URL.createObjectURL(file);
+  showPhotoPreview(idx, localUrl);
+  showUploadStatus(idx, 'Uploading to Cloudinary...', '');
+  setUploadProgress(idx, 5);
+
+  const button = document.getElementById(`upload-btn-${idx}`);
+  if(button) button.disabled = true;
+
+  try{
+    const cloudinaryUrl = await uploadToCloudinary(file, idx);
+    photoUrls[idx] = cloudinaryUrl;
+    const urlInput = document.getElementById(`p-src-${idx}`);
+    if(urlInput) urlInput.value = cloudinaryUrl;
+    showPhotoPreview(idx, cloudinaryUrl);
+    setUploadProgress(idx, 100);
+    showUploadStatus(idx, 'Upload complete. The image URL has been added.', 'success');
+  } catch(err){
+    console.error('Cloudinary upload failed:', err);
+    setUploadProgress(idx, 100);
+    showUploadStatus(idx, err.message || 'Upload failed. Paste an image URL instead.', 'error');
+  } finally {
+    if(button) button.disabled = false;
+    input.value = '';
+    URL.revokeObjectURL(localUrl);
+  }
+}
+
+function uploadToCloudinary(file, idx){
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', UPLOAD_PRESET);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`);
+
+    xhr.upload.onprogress = event => {
+      if(event.lengthComputable){
+        const pct = Math.max(8, Math.min(95, Math.round((event.loaded / event.total) * 95)));
+        setUploadProgress(idx, pct);
+      }
+    };
+
+    xhr.onload = () => {
+      let data = {};
+      try {
+        data = JSON.parse(xhr.responseText || '{}');
+      } catch(e) {
+        reject(new Error('Cloudinary returned an unreadable response.'));
+        return;
+      }
+
+      if(xhr.status >= 200 && xhr.status < 300 && data.secure_url){
+        resolve(data.secure_url);
+      } else {
+        reject(new Error(data.error?.message || 'Upload failed. Please try again or paste an image URL.'));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error('Network error during upload. Check your connection and try again.'));
+    xhr.ontimeout = () => reject(new Error('Upload timed out. Try a smaller image or paste a URL.'));
+    xhr.timeout = 60000;
+    xhr.send(formData);
+  });
+}
+
+function handlePhotoUrlInput(idx){
+  const input = document.getElementById(`p-src-${idx}`);
+  const url = input ? input.value.trim() : '';
+  photoUrls[idx] = url;
+
+  if(url){
+    showPhotoPreview(idx, url);
+    showUploadStatus(idx, 'Using the image URL above.', 'success');
+    setUploadProgress(idx, 100);
+  } else {
+    clearPhotoPreview(idx);
+    showUploadStatus(idx, '', '');
+    setUploadProgress(idx, 0);
+  }
+}
+
+function showPhotoPreview(idx, src){
+  const wrap = document.getElementById(`preview-wrap-${idx}`);
+  const img = document.getElementById(`preview-${idx}`);
+  if(!wrap || !img) return;
+
+  img.onerror = () => {
+    showUploadStatus(idx, 'Preview could not load. Check that the URL is a direct image link.', 'error');
+  };
+  img.src = src;
+  wrap.classList.add('show');
+}
+
+function clearPhotoPreview(idx){
+  const wrap = document.getElementById(`preview-wrap-${idx}`);
+  const img = document.getElementById(`preview-${idx}`);
+  if(img) img.removeAttribute('src');
+  if(wrap) wrap.classList.remove('show');
+}
+
+function setUploadProgress(idx, pct){
+  const wrap = document.getElementById(`progress-wrap-${idx}`);
+  const bar = document.getElementById(`progress-bar-${idx}`);
+  if(!wrap || !bar) return;
+
+  if(pct > 0) wrap.classList.add('show');
+  else wrap.classList.remove('show');
+  bar.style.width = `${pct}%`;
+}
+
+function showUploadStatus(idx, message, state){
+  const wrap = document.getElementById(`progress-wrap-${idx}`);
+  const text = document.getElementById(`progress-text-${idx}`);
+  if(!wrap || !text) return;
+
+  text.textContent = message;
+  text.className = 'upload-progress-text';
+  if(state) text.classList.add(state);
+  const bar = document.getElementById(`progress-bar-${idx}`);
+  if(bar) bar.style.background = state === 'error'
+    ? '#c0392b'
+    : 'linear-gradient(90deg,var(--rose-dark),var(--rose))';
+  if(message) wrap.classList.add('show');
+}
+
 let timelineCount = 0;
 const timelineEmojis = ['✨','💬','🌊','🍂','❄️','🌱','💌','🎉','🌙','☕','🌅','🎵'];
 function addTimeline(){
@@ -698,8 +932,9 @@ function collectData(){
   for(let i=0;i<photoCount;i++){
     const el = document.getElementById(`photo-${i}`);
     if(!el) continue;
+    const src = photoUrls[i] || v(`p-src-${i}`) || '';
     data.photos.push({
-      src:      v(`p-src-${i}`)      || '',
+      src:      src,
       caption:  v(`p-caption-${i}`)  || '',
       date:     v(`p-date-${i}`)     || '',
       location: v(`p-location-${i}`) || '',
@@ -751,7 +986,7 @@ function generatePage(){
 
   // Build the shareable URL pointing to view.html
     const base = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
-  const url     = `${base}view.html?d=${encoded}`;
+  const url     = `${base}view.html?d=${encodeURIComponent(encoded)}`;
 
   document.getElementById('generatedUrl').textContent = url;
   document.getElementById('previewBtn').href          = url;
