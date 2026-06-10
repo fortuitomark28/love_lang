@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Dancing+Script:wght@500;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-<!-- test -->
 <style>
 :root{
   --rose:#c9748a;--rose-light:#f0d4dc;--rose-dark:#8a4a5e;
@@ -16,8 +15,6 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Inter',sans-serif;background:var(--ivory);color:var(--ink);min-height:100vh;}
-
-/* ── TOP BAR ── */
 .topbar{
   position:fixed;top:0;left:0;right:0;z-index:100;
   background:rgba(253,248,245,0.92);backdrop-filter:blur(16px);
@@ -30,8 +27,6 @@ body{font-family:'Inter',sans-serif;background:var(--ivory);color:var(--ink);min
   display:flex;align-items:center;gap:6px;transition:color 0.2s;
 }
 .topbar-back:hover{color:var(--rose-dark);}
-
-/* ── PROGRESS ── */
 .progress-wrap{
   position:fixed;top:60px;left:0;right:0;z-index:99;
   background:rgba(253,248,245,0.95);backdrop-filter:blur(8px);
@@ -1284,8 +1279,6 @@ addTimeline();
 addSticky();
 addSticky();
 buildThemeGrid();
-
-// Clear field-level errors as the user corrects them
 ['recipientName','creatorName','pagePassword'].forEach(id => {
   const el = document.getElementById(id);
   if(el) el.addEventListener('input', () => setFieldError(id, false));
