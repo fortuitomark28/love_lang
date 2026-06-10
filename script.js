@@ -1,10 +1,3 @@
-/* ══════════════════════════════════════════════════
-   SCRIPT.JS — Memory Website Logic
-   Depends on: config.js (must load first)
-   ══════════════════════════════════════════════════ */
-
-/* ─── LOCK SCREEN ─────────────────────────────────── */
-
 function createParticles() {
   const container = document.getElementById('lockParticles');
   for (let i = 0; i < 60; i++) {
@@ -47,9 +40,6 @@ function tryUnlock() {
     setTimeout(() => err.classList.remove('show'), 3000);
   }
 }
-
-/* ─── TYPEWRITER ──────────────────────────────────── */
-
 function startTypewriter() {
   const el   = document.getElementById('typewriterText');
   const sign = document.getElementById('letterSign');
@@ -86,9 +76,6 @@ function startTypewriter() {
 
   setTimeout(type, 600);
 }
-
-/* ─── GALLERY ─────────────────────────────────────── */
-
 function buildGallery() {
   const grid = document.getElementById('photoGrid');
 
@@ -151,8 +138,6 @@ function updateLightbox() {
   document.getElementById('lbMeta').textContent    = `${p.caption} · ${p.date} · ${p.location}`;
 }
 
-/* ─── TIMELINE ────────────────────────────────────── */
-
 function buildTimeline() {
   const track = document.getElementById('timelineTrack');
 
@@ -186,8 +171,6 @@ function observeTimeline() {
 
   document.querySelectorAll('.timeline-entry').forEach(el => obs.observe(el));
 }
-
-/* ─── LETTERS ─────────────────────────────────────── */
 
 function buildLetters() {
   const grid = document.getElementById('envelopesGrid');
@@ -228,7 +211,6 @@ function toggleEnvelope(i) {
   document.getElementById(`env-${i}`).classList.toggle('open-env');
 }
 
-/* ─── STICKY NOTES ────────────────────────────────── */
 
 function buildStickies() {
   const grid = document.getElementById('stickyGrid');
@@ -244,7 +226,6 @@ function buildStickies() {
   });
 }
 
-/* ─── VIDEOS ──────────────────────────────────────── */
 
 function buildVideos() {
   const grid = document.getElementById('videoGrid');
@@ -252,8 +233,6 @@ function buildVideos() {
   videos.forEach(v => {
     const card     = document.createElement('div');
     card.className = 'video-card';
-
-    // If a real src is provided, embed it; otherwise show placeholder modal
     if (v.src) {
       card.innerHTML = `
         <div class="video-thumb">
@@ -280,8 +259,6 @@ function buildVideos() {
     grid.appendChild(card);
   });
 }
-
-/* ─── STARS CANVAS ────────────────────────────────── */
 
 function initStars() {
   const canvas = document.getElementById('starsCanvas');
@@ -321,7 +298,6 @@ function initStars() {
   draw();
 }
 
-/* ─── FLOATING MEMORY WORDS ───────────────────────── */
 
 function initFloatingWords() {
   const container = document.getElementById('floatingWords');
@@ -345,7 +321,6 @@ function initFloatingWords() {
   });
 }
 
-/* ─── MUSIC ───────────────────────────────────────── */
 
 let musicOn      = false;
 let currentTrack = 0;
@@ -402,7 +377,7 @@ function hideMusicBar() {
   document.getElementById('musicBar').classList.remove('visible');
 }
 
-/* ─── SCROLL EVENTS ───────────────────────────────── */
+
 
 window.addEventListener('scroll', () => {
   const nav = document.getElementById('mainNav');
@@ -412,7 +387,6 @@ window.addEventListener('scroll', () => {
   btn.classList.toggle('visible', window.scrollY > 400);
 });
 
-/* ─── SMOOTH NAV ──────────────────────────────────── */
 
 document.querySelectorAll('.nav-links a').forEach(a => {
   a.addEventListener('click', e => {
@@ -422,7 +396,7 @@ document.querySelectorAll('.nav-links a').forEach(a => {
   });
 });
 
-/* ─── KEYBOARD ────────────────────────────────────── */
+
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
