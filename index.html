@@ -223,6 +223,36 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(138,74,94,0.4);}
 .btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
 
+/* ── VALIDATION ── */
+.field-error input,
+.field-error textarea,
+.field-error select{
+  border-color:#c0392b !important;
+  box-shadow:0 0 0 3px rgba(192,57,43,0.12) !important;
+}
+.field-error-msg{
+  display:none;
+  margin-top:6px;
+  font-size:12px;
+  color:#c0392b;
+  font-weight:500;
+  letter-spacing:0.02em;
+}
+.field-error .field-error-msg{ display:block; }
+
+.validation-banner{
+  display:none;
+  background:#fff0ee;
+  border:1.5px solid rgba(192,57,43,0.25);
+  border-radius:12px;
+  padding:14px 18px;
+  margin-bottom:28px;
+  font-size:13px;
+  color:#c0392b;
+  line-height:1.6;
+}
+.validation-banner.show{ display:block; }
+
 /* ── LETTER ENTRIES ── */
 .letter-entries{display:flex;flex-direction:column;gap:16px;}
 .letter-entry{background:white;border:1.5px solid rgba(201,116,138,0.2);border-radius:16px;padding:24px;}
@@ -367,14 +397,18 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
     <h2 class="step-heading">Let's start with the <em>basics</em></h2>
     <p class="step-sub">Tell us who this page is for and set up the password they'll use to open it.</p>
 
-    <div class="field">
+    <div class="validation-banner" id="vbanner-0"></div>
+
+    <div class="field" id="field-recipientName">
       <label>Recipient's name <span>(the person receiving this)</span></label>
       <input type="text" id="recipientName" placeholder="e.g. my love, babe…">
+      <div class="field-error-msg">Please enter the recipient's name.</div>
     </div>
     <div class="field-row">
-      <div class="field">
+      <div class="field" id="field-creatorName">
         <label>Your name <span>(the creator)</span></label>
         <input type="text" id="creatorName" placeholder="e.g. Marco">
+        <div class="field-error-msg">Please enter your name.</div>
       </div>
       <div class="field">
         <label>Page title <span>(optional)</span></label>
@@ -382,9 +416,10 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
       </div>
     </div>
     <div class="field-row">
-      <div class="field">
+      <div class="field" id="field-pagePassword">
         <label>Password <span>(they'll use this to open the page)</span></label>
         <input type="text" id="pagePassword" placeholder="e.g. iloveyou">
+        <div class="field-error-msg">Please set a password for the page.</div>
       </div>
       <div class="field">
         <label>Password hint <span>(shown on the lock screen)</span></label>
@@ -425,6 +460,8 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
     <h2 class="step-heading">Your <em>letters</em></h2>
     <p class="step-sub">Write one or more heartfelt letters. Each appears in a clickable envelope on the page. You can add up to 6.</p>
 
+    <div class="validation-banner" id="vbanner-1"></div>
+
     <div class="letter-entries" id="letterEntries"></div>
     <button class="add-btn" onclick="addLetter()" id="addLetterBtn">+ Add another letter</button>
 
@@ -438,6 +475,8 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   <div class="step-panel" id="step-2">
     <h2 class="step-heading">Photo <em>gallery</em></h2>
     <p class="step-sub">Upload photos from your phone, camera, or computer. The Cloudinary URL will fill in automatically, and you can still paste a public image URL manually. You can add up to 12.</p>
+
+    <div class="validation-banner" id="vbanner-2"></div>
 
     <div class="photo-entries" id="photoEntries"></div>
     <button class="add-btn" onclick="addPhoto()" id="addPhotoBtn">+ Add another photo</button>
@@ -453,6 +492,8 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
     <h2 class="step-heading">Memory <em>timeline</em></h2>
     <p class="step-sub">Add the milestones of your story — big and small. Each entry appears as an animated card on a scrolling timeline.</p>
 
+    <div class="validation-banner" id="vbanner-3"></div>
+
     <div class="timeline-entries" id="timelineEntries"></div>
     <button class="add-btn" onclick="addTimeline()">+ Add another moment</button>
 
@@ -467,6 +508,8 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
     <h2 class="step-heading">Little <em>notes</em></h2>
     <p class="step-sub">Short things you never want to forget — inside jokes, quotes, tiny moments. They appear as colorful sticky notes.</p>
 
+    <div class="validation-banner" id="vbanner-4"></div>
+
     <div class="sticky-entries" id="stickyEntries"></div>
     <button class="add-btn" onclick="addSticky()">+ Add another note</button>
 
@@ -480,6 +523,8 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   <div class="step-panel" id="step-5">
     <h2 class="step-heading">Choose your <em>style</em></h2>
     <p class="step-sub">Pick a color theme that feels right for this page.</p>
+
+    <div class="validation-banner" id="vbanner-5"></div>
 
     <div class="theme-grid" id="themeGrid"></div>
 
@@ -593,6 +638,20 @@ let currentStep = 0;
 const TOTAL_STEPS = 7;
 
 function goToStep(n){
+  // If jumping forward via progress dot, validate every step up to n-1
+  if(n > currentStep){
+    for(let s = currentStep; s < n; s++){
+      if(!validateStep(s)){
+        // Show the first failing step
+        _goToStepDirect(s);
+        return;
+      }
+    }
+  }
+  _goToStepDirect(n);
+}
+
+function _goToStepDirect(n){
   document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
   document.getElementById(`step-${n}`).classList.add('active');
 
@@ -609,8 +668,138 @@ function goToStep(n){
   if(n === 6) generatePage();
 }
 
-function nextStep(){ if(currentStep < TOTAL_STEPS-1) goToStep(currentStep+1); }
+function nextStep(){
+  if(!validateStep(currentStep)) return;
+  if(currentStep < TOTAL_STEPS-1) goToStep(currentStep+1);
+}
 function prevStep(){ if(currentStep > 0) goToStep(currentStep-1); }
+
+/* ══════════════════════════════════
+   VALIDATION
+   ══════════════════════════════════ */
+function showBanner(step, msgs){
+  const banner = document.getElementById(`vbanner-${step}`);
+  if(!banner) return;
+  if(msgs.length === 0){ banner.textContent=''; banner.classList.remove('show'); return; }
+  banner.innerHTML = '⚠️ Please fix the following before continuing:<br>' +
+    msgs.map(m=>`• ${m}`).join('<br>');
+  banner.classList.add('show');
+  banner.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function clearBanner(step){
+  const banner = document.getElementById(`vbanner-${step}`);
+  if(banner){ banner.textContent=''; banner.classList.remove('show'); }
+}
+
+function setFieldError(fieldId, hasError){
+  const wrapper = document.getElementById(`field-${fieldId}`);
+  if(!wrapper) return;
+  if(hasError) wrapper.classList.add('field-error');
+  else wrapper.classList.remove('field-error');
+}
+
+function validateStep(step){
+  clearBanner(step);
+  const errors = [];
+
+  if(step === 0){
+    // Required: recipient name, creator name, password
+    const recipient = v('recipientName');
+    const creator   = v('creatorName');
+    const password  = v('pagePassword');
+
+    setFieldError('recipientName', !recipient);
+    setFieldError('creatorName',   !creator);
+    setFieldError('pagePassword',  !password);
+
+    if(!recipient) errors.push("Recipient's name is required.");
+    if(!creator)   errors.push("Your name (creator) is required.");
+    if(!password)  errors.push("A password is required so only they can open the page.");
+
+    // If music URL is filled, it must look like a URL
+    const musicUrl = v('musicUrl');
+    if(musicUrl && !/^https?:\/\/.+/.test(musicUrl)){
+      errors.push("Music URL doesn't look valid — it should start with https://");
+    }
+  }
+
+  else if(step === 1){
+    // At least one letter must exist; each visible letter needs a label and a body
+    const entries = document.querySelectorAll('#letterEntries .letter-entry');
+    if(entries.length === 0){
+      errors.push('Add at least one letter before continuing.');
+    } else {
+      entries.forEach((entry, i) => {
+        const id = entry.id.split('-')[1]; // e.g. "0"
+        const label = (document.getElementById(`l-label-${id}`)?.value || '').trim();
+        const body  = (document.getElementById(`l-body-${id}`)?.value  || '').trim();
+        if(!label) errors.push(`Letter ${i+1}: the envelope label is required.`);
+        if(!body)  errors.push(`Letter ${i+1}: the letter body can't be empty.`);
+      });
+    }
+  }
+
+  else if(step === 2){
+    // At least one photo; each visible photo needs a caption (image is encouraged but not hard-required)
+    const entries = document.querySelectorAll('#photoEntries .photo-entry');
+    if(entries.length === 0){
+      errors.push('Add at least one photo before continuing.');
+    } else {
+      entries.forEach((entry, i) => {
+        const id      = entry.id.split('-')[1];
+        const caption = (document.getElementById(`p-caption-${id}`)?.value || '').trim();
+        if(!caption) errors.push(`Photo ${i+1}: a caption is required.`);
+      });
+    }
+  }
+
+  else if(step === 3){
+    // Each visible timeline entry needs a title and text
+    const entries = document.querySelectorAll('#timelineEntries .timeline-entry-form');
+    if(entries.length === 0){
+      errors.push('Add at least one timeline moment before continuing.');
+    } else {
+      entries.forEach((entry, i) => {
+        const id    = entry.id.split('-')[1];
+        const title = (document.getElementById(`tl-title-${id}`)?.value || '').trim();
+        const text  = (document.getElementById(`tl-text-${id}`)?.value  || '').trim();
+        if(!title) errors.push(`Timeline moment ${i+1}: a title is required.`);
+        if(!text)  errors.push(`Timeline moment ${i+1}: a description is required.`);
+      });
+    }
+  }
+
+  else if(step === 4){
+    // Each visible sticky note needs text
+    const entries = document.querySelectorAll('#stickyEntries .sticky-entry-form');
+    if(entries.length === 0){
+      errors.push('Add at least one sticky note before continuing.');
+    } else {
+      entries.forEach((entry, i) => {
+        const id   = entry.id.split('-')[1];
+        const text = (document.getElementById(`st-text-${id}`)?.value || '').trim();
+        if(!text) errors.push(`Note ${i+1}: the note text can't be empty.`);
+      });
+    }
+  }
+
+  else if(step === 5){
+    // Final message is required; closing signature optional but nudged
+    const finalMsg  = v('finalMessage');
+    const finalSign = v('finalSign');
+    if(!finalMsg)  errors.push('A final message is required — its the last thing they read.');
+    if(!finalSign) errors.push('Please add a closing signature, even a simple one.');
+  }
+
+  if(errors.length > 0){
+    showBanner(step, errors);
+    return false;
+  }
+
+  showBanner(step, []); // clear any previous banner
+  return true;
+}
 
 /* ══════════════════════════════════
    DYNAMIC ENTRIES
@@ -1105,6 +1294,12 @@ addTimeline();
 addSticky();
 addSticky();
 buildThemeGrid();
+
+// Clear field-level errors as the user corrects them
+['recipientName','creatorName','pagePassword'].forEach(id => {
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', () => setFieldError(id, false));
+});
 </script>
 </body>
 </html>
